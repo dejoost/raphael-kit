@@ -32,7 +32,7 @@ def setup():
 	p_B.start(0)
 	 
 	#LCD setup
-	LCD1602.init(0x27, 1)    # init(slave address, background light)
+	LCD1602.init(0x27, 0)    # init(slave address, background light)
 	LCD1602.clear()
 
 # LED coloring
@@ -65,14 +65,23 @@ def pir_check():
 	pir_val = GPIO.input(pirPin)
 	if pir_val==GPIO.HIGH:
 		setColor(0xFFFF00)
+		timer()
 		if armed and not motion:
 			motion = True
+			timer()
 	else :
 		if armed:
 			setColor(0xFF0000)
 		else:
 			setColor(0x00FF00F)
-			  
+
+def timer():  
+    global counter
+    global timer1
+    timer1 = threading.Timer(1, timer) 
+    timer1.start()  
+    counter += 1
+	
 
 def destroy():
 	p_R.stop()
@@ -82,43 +91,31 @@ def destroy():
 	GPIO.cleanup()
 
 def loop():
-	global keyIndex
-	global LENS
-	global keypad, last_key_pressed
-	while(True):
-		pressed_keys = keypad.read()
-		if len(pressed_keys) != 0 and last_key_pressed != pressed_keys:
-			LCD1602.clear()
-			LCD1602.write(0, 0, "Enter password:")
-			LCD1602.write(15-keyIndex,1, pressed_keys)
-			testword[keyIndex]=pressed_keys
-			keyIndex+=1
-			#print(testword)
+	while True:
+		if counter > 30:
+			print("alarm")
+			LCD1602.write(0, 0, 'Greetings!')
+			LCD1602.write(1, 1, 'From SunFounder')
 
-			if (keyIndex is LENS):
-				if (check() is 0):
-					LCD1602.clear()
-					LCD1602.write(3, 0, "WRONG KEY!")
-					LCD1602.write(0, 1, "please try again")
-				else:
-					LCD1602.clear()
-					LCD1602.write(4, 0, "CORRECT!")
-					LCD1602.write(2, 1, "welcome back")
-			keyIndex=keyIndex%LENS
+def activate():
+	global armed
+	armed = True
 
-		last_key_pressed = pressed_keys
-		time.sleep(0.1)
+def deactivate():
+	global armed
+	global counter
+	armed = False
+	counter = 0
+
 		   
 if __name__ == '__main__':     # Program start from here
 	try:
 		setup()
-		t1 = threading.Thread(target=thread1, args=(10,))
-		t2 = threading.Thread(target=thread2, args=(12,))
+		#t1 = threading.Thread(target=thread1)
+		#t2 = threading.Thread(target=thread2)
 		# start the threads
-		t1.start()
-		t2.start()
-		# join the main thread
-		t1.join()
-		t2.join()
+		#t1.start()
+		#t2.start()
+		time.sleep(10)
 	except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the program destroy() will be  executed.
 		destroy()

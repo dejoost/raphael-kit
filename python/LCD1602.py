@@ -99,6 +99,10 @@ def openlight():  # Enable the backlight
 	BUS.write_byte(0x27,0x08)
 	BUS.close()
 
+def closelight():  # Enable the backlight
+	BUS.write_byte(0x27,0x00)
+	BUS.close()
+
 def write(x, y, str):
 	if x < 0:
 		x = 0
