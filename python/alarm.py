@@ -4,9 +4,11 @@ import RPi.GPIO as GPIO
 import time
 import LCD1602
 from mfrc522 import SimpleMFRC522
-import smbus2 as smbus
-import subprocess
+from playsound import playsound
+
 import threading
+
+reader = SimpleMFRC522()
 
 rgbPins = {'Red':18, 'Green':27, 'Blue':22}
 pirPin = 17    # the pir connect to pin17
@@ -45,17 +47,6 @@ def setup():
 def MAP(x, in_min, in_max, out_min, out_max):
 	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
-BUS = smbus.SMBus(1)
-
-def write_word(addr, data):
-	global BLEN
-	temp = data
-	if BLEN == 1:
-		temp |= 0x08
-	else:
-		temp &= 0xF7
-	BUS.write_byte(addr ,temp)
-
 # Define a function to set up colors 
 def setColor(color):
  # configures the three LEDs' luminance with the inputted color value . 
@@ -73,31 +64,47 @@ def setColor(color):
 	p_G.ChangeDutyCycle(G_val)
 	p_B.ChangeDutyCycle(B_val)
 	#print ("color_msg: R_val = %s,	G_val = %s,	B_val = %s"%(R_val, G_val, B_val))
-	 
+
+def activate():
+	global armed
+	global counter
+	global motion
+	armed = True
+	motion_time = None
+	motion = False
+
+def deactivate():
+	global armed
+	armed = False
+
+def alarm_check():
+	if armed == True & motion == True:
+		current_time = time.now()
+		time_since_motion = current_time - motion_time
+		if time_since_motion > 30:
+			playsound('./siren.wav')
+	time.sleep(1)
+
+
 def pir_check():
 	global armed
 	global motion
 	pir_val = GPIO.input(pirPin)
 	if pir_val==GPIO.HIGH:
 		setColor(0xFFFF00)
-		timer()
 		if armed and not motion:
 			motion = True
-			timer()
+			motion_time = time.time()
 	else :
 		if armed:
 			setColor(0xFF0000)
 		else:
 			setColor(0x00FF00F)
+	time.sleep(0.1)
 
-def timer():  
-    global counter
-    global timer1
-    timer1 = threading.Timer(1, timer) 
-    timer1.start()  
-    counter += 1
+def badge_check():
+	time.sleep(0.1)
 	
-
 def destroy():
 	p_R.stop()
 	p_G.stop()
@@ -112,26 +119,16 @@ def loop():
 			LCD1602.write(0, 0, 'Greetings!')
 			LCD1602.write(1, 1, 'From SunFounder')
 
-def activate():
-	global armed
-	global counter
-	global motion
-	armed = True
-	counter = 0
-	motion = False
-
-def deactivate():
-	global armed
-	armed = False
-
 if __name__ == '__main__':     # Program start from here
 	try:
 		setup()
 		pir_thread = threading.Thread(target=pir_check)
-		#t2 = threading.Thread(target=thread2)
+		alarm_thread = threading.Thread(target=alarm_check)
+		badge_thread = threading.Thread(target=badge_check)
 		# start the threads
 		pir_thread.start()
-		#t2.start()
+		alarm_thread.start()
+		badge_thread.start()
 		time.sleep(10)
 	except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the program destroy() will be  executed.
 		destroy()
