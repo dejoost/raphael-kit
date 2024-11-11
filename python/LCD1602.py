@@ -96,12 +96,12 @@ def clear():
 	send_command(0x01) # Clear Screen
 
 def openlight():  # Enable the backlight
-	BUS.write_byte(0x27,0x08)
-	BUS.close()
+	global BLEN
+	BLEN = 1
 
-def closelight():  # Enable the backlight
-	BUS.write_byte(0x27,0x00)
-	BUS.close()
+def closelight():  # Disable the backlight
+	global BLEN
+	BLEN = 0
 
 def write(x, y, str):
 	if x < 0:
